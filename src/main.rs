@@ -33,7 +33,6 @@ fn main() -> tantivy::Result<()> {
     let pkgbase = schema.get_field("pkgbase").unwrap();
     let pkgbuild = schema.get_field("pkgbuild").unwrap();
 
-    /*
     // configuration variable/option
     for entry in read_dir("/home/jelle/projects/pkgbuildsearch/packages/")? {
         let entry = entry?;
@@ -64,8 +63,8 @@ fn main() -> tantivy::Result<()> {
     }
 
     index_writer.commit()?;
-    */
 
+    /*
     let reader = index
         .reader_builder()
         .reload_policy(ReloadPolicy::OnCommit)
@@ -81,6 +80,7 @@ fn main() -> tantivy::Result<()> {
         let retrieved_doc = searcher.doc(doc_address)?;
         println!("{}", schema.to_json(&retrieved_doc));
     }
+    */
 
     Ok(())
 }
