@@ -37,26 +37,31 @@ fn main() -> tantivy::Result<()> {
         let basename = entry.path().clone();
         let pkgbasestr = basename.file_name().unwrap().to_str().unwrap_or("").to_string();
         let mut doc = Document::default();
-        //println!("Name: {}", path.unwrap().file_name());
 
         let pkgbuildfile = format!("{}/trunk/PKGBUILD", &path.display());
-        //println!("PKGBUILD file: {}", pkgbuildfile);
 
         if !path_exists(&pkgbuildfile) {
             println!("PKGBUILD not found: {}", pkgbuildfile);
             continue;
         }
 
-        //println!("read file: {}", &pkgbuildfile);
-        let mut file = File::open(pkgbuildfile).expect("Unable to open file");
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).expect("unable to read string");
+        println!("indexing {}", &pkgbuildfile);
+        let file = File::open(pkgbuildfile);
+        if !file.is_ok() {
+            println!("unable to open file: {:?}", file.unwrap_err());
+            continue;
+        }
 
-        //println!("contents: {}", &contents);
+        let mut contents = String::new();
+        let res = file.unwrap().read_to_string(&mut contents);
+        if !res.is_ok() {
+            println!("unable to read file: {:?}", res.unwrap_err());
+            continue;
+        }
+
         doc.add_text(pkgbase, &pkgbasestr);
         doc.add_text(pkgbuild, &contents);
 
-        //let mut file = File::open("{}/trunk/PKGBUILD", path.)?;
         index_writer.add_document(doc);
     }
 
