@@ -47,14 +47,14 @@ fn main() -> tantivy::Result<()> {
 
         println!("indexing {}", &pkgbuildfile);
         let file = File::open(pkgbuildfile);
-        if !file.is_ok() {
+        if file.is_err() {
             println!("unable to open file: {:?}", file.unwrap_err());
             continue;
         }
 
         let mut contents = String::new();
         let res = file.unwrap().read_to_string(&mut contents);
-        if !res.is_ok() {
+        if res.is_err() {
             println!("unable to read file: {:?}", res.unwrap_err());
             continue;
         }
