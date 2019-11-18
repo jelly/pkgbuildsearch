@@ -59,7 +59,7 @@ fn main() -> tantivy::Result<()> {
             println!("{}", serde_json::to_string(&named_doc).unwrap());
         }
     }
-    println!("{}", now.elapsed().as_nanos());
+    println!("{} ms", now.elapsed().as_millis());
 
     Ok(())
 }
