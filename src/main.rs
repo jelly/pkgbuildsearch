@@ -19,7 +19,7 @@ fn main() -> tantivy::Result<()> {
     let mut schema_builder = Schema::builder();
 
     schema_builder.add_text_field("pkgbase", TEXT | STORED);
-    schema_builder.add_text_field("pkgbuild", TEXT);
+    schema_builder.add_text_field("pkgbuild", TEXT | STORED);
 
     let schema = schema_builder.build();
     let index = Index::create_in_dir(&index_path, schema.clone())?;
