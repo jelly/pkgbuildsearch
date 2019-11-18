@@ -6,6 +6,8 @@ use std::time::Instant;
 use tantivy::query::QueryParser;
 use tantivy::Index;
 
+use tantivy::collector::TopDocs;
+
 use serde_json;
 
 
@@ -26,6 +28,20 @@ fn main() -> tantivy::Result<()> {
     let now = Instant::now();
     let query = query_parser.parse_query(query)?;
     let searcher = index.reader()?.searcher();
+
+    /*
+    // Allows getting with a limit..
+    let top_docs = searcher.search(&query, &TopDocs::with_limit(10000))?;
+    for (_score, doc_address) in top_docs {
+        let retrieved_doc = searcher.doc(doc_address)?;
+        let foo = retrieved_doc.get_all(pkgbuild);
+        println!("{}", &foo[0].text().unwrap());
+        //let values = retrieved_doc.get_all();
+        //println!("{}", values[0].text);
+        println!("{}", schema.to_json(&retrieved_doc));
+    }
+    */
+
     let weight = query.weight(&searcher, false)?;
     let schema = index.schema();
     for segment_reader in searcher.segment_readers() {
