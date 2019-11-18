@@ -21,3 +21,15 @@ $ mkdir /tmp/pkgbuildsearch
 $ cargo run --bin indexer
 $ cargo run --bin search lol
 ```
+
+## TODO
+
+The design is still work in progress, there are a few things which need to be figured out:
+
+* service architecture, multiple binaries (indexer, rest service) or a single in ram index.
+* design a rest API
+* figure out updating the index when git updates
+* updating git repositories (bare clone or full clone), compare size differences
+* handle different encodings such as ISO-8859-15, report them as they should be fixed
+* report directories with missing PKGBUILD's
+* seccomp filtering for webservice and git updating
