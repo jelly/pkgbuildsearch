@@ -42,21 +42,22 @@ fn main() -> tantivy::Result<()> {
         let pkgbuildfile = format!("{}/trunk/PKGBUILD", &path.display());
         //println!("PKGBUILD file: {}", pkgbuildfile);
 
-        //let basedir = path.unwrap().path().clone();
-        //let basename = basedir.clone();
-        if path_exists(&pkgbuildfile) { 
-            //println!("read file: {}", &pkgbuildfile);
-            let mut file = File::open(pkgbuildfile)?;
-            let mut contents = String::new();
-            file.read_to_string(&mut contents)?;
-
-            //println!("contents: {}", &contents);
-            doc.add_text(pkgbase, &pkgbasestr);
-            doc.add_text(pkgbuild, &contents);
-            
-            //let mut file = File::open("{}/trunk/PKGBUILD", path.)?;
-            index_writer.add_document(doc);
+        if !path_exists(&pkgbuildfile) {
+            println!("PKGBUILD not found: {}", pkgbuildfile);
+            continue;
         }
+
+        //println!("read file: {}", &pkgbuildfile);
+        let mut file = File::open(pkgbuildfile).expect("Unable to open file");
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).expect("unable to read string");
+
+        //println!("contents: {}", &contents);
+        doc.add_text(pkgbase, &pkgbasestr);
+        doc.add_text(pkgbuild, &contents);
+
+        //let mut file = File::open("{}/trunk/PKGBUILD", path.)?;
+        index_writer.add_document(doc);
     }
 
     index_writer.commit()?;
