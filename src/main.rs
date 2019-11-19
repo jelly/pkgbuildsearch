@@ -9,11 +9,6 @@ use tantivy::schema::*;
 use tantivy::Index;
 
 
-pub fn path_exists(path: &str) -> bool {
-    fs::metadata(path).is_ok()
-}
-
-
 fn main() -> tantivy::Result<()> {
     let index_path = "/tmp/pkgbuildsearch";
     let mut schema_builder = Schema::builder();
@@ -39,7 +34,7 @@ fn main() -> tantivy::Result<()> {
 
         let pkgbuildfile = format!("{}/trunk/PKGBUILD", &path.display());
 
-        if !path_exists(&pkgbuildfile) {
+        if fs::metadata(&pkgbuildfile).is_err() {
             println!("PKGBUILD not found: {}", pkgbuildfile);
             continue;
         }
