@@ -1,3 +1,4 @@
+extern crate clap;
 extern crate tantivy;
 
 use std::fs::read_dir;
@@ -5,12 +6,13 @@ use std::fs::File;
 use std::fs;
 use std::io::prelude::*;
 
+use clap::{Arg, App};
+
 use tantivy::schema::*;
 use tantivy::Index;
 
 
-fn main() -> tantivy::Result<()> {
-    let index_path = "/tmp/pkgbuildsearch";
+fn indexer(repo_path: &str, index_path: &str) -> tantivy::Result<()> {
     let mut schema_builder = Schema::builder();
 
     schema_builder.add_text_field("pkgbase", TEXT | STORED);
@@ -26,7 +28,7 @@ fn main() -> tantivy::Result<()> {
     let pkgbuild = schema.get_field("pkgbuild").unwrap();
 
     // configuration variable/option
-    for entry in read_dir("/home/jelle/projects/packages/")? {
+    for entry in read_dir(repo_path)? {
         let entry = entry?;
         let path = entry.path();
         let basename = entry.path().clone();
@@ -65,4 +67,23 @@ fn main() -> tantivy::Result<()> {
     println!("Finished indexing");
 
     Ok(())
+}
+
+
+fn main() -> tantivy::Result<()> {
+    let matches = App::new("pkgbuildindexer")
+                          .version("0.1")
+                          .author("Jelle van der Waa <jelle@vdwaa.nl>")
+                          .about("Index git repositories")
+                          .arg(Arg::with_name("repo-path")
+                               .help("Git repository path")
+                               .required(true))
+                          .arg(Arg::with_name("index-path")
+                               .help("Index path")
+                               .required(true))
+                          .get_matches();
+
+    let repo_path = matches.value_of("repo-path").unwrap();
+    let index_path = matches.value_of("index-path").unwrap();
+    indexer(repo_path, index_path)
 }
