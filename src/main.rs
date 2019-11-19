@@ -36,7 +36,6 @@ fn main() -> tantivy::Result<()> {
         let path = entry.path();
         let basename = entry.path().clone();
         let pkgbasestr = basename.file_name().unwrap().to_str().unwrap_or("").to_string();
-        let mut doc = Document::default();
 
         let pkgbuildfile = format!("{}/trunk/PKGBUILD", &path.display());
 
@@ -59,6 +58,7 @@ fn main() -> tantivy::Result<()> {
             continue;
         }
 
+        let mut doc = Document::default();
         doc.add_text(pkgbase, &pkgbasestr);
         doc.add_text(pkgbuild, &contents);
 
