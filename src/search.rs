@@ -1,23 +1,32 @@
 extern crate tantivy;
 
-use std::env;
 use std::time::Instant;
 
 use tantivy::query::QueryParser;
 use tantivy::Index;
 
-use tantivy::collector::TopDocs;
+use clap::{Arg, App};
 
 use serde_json;
 
 
 fn main() -> tantivy::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
-    let query = &args[1];
+    let matches = App::new("pkgbuildsearch")
+                          .version("0.1")
+                          .author("Jelle van der Waa <jelle@vdwaa.nl>")
+                          .about("Search git repositories")
+                          .arg(Arg::with_name("index-path")
+                               .help("Index path")
+                               .required(true))
+                          .arg(Arg::with_name("query")
+                               .help("Search query")
+                               .required(true))
+                          .get_matches();
+
+    let query = matches.value_of("query").unwrap();
+    let index_path = matches.value_of("index-path").unwrap();
 
     // TODO: handle error when index path does not exists or no index
-    let index_path = "/tmp/pkgbuildsearch";
     let directory = std::path::Path::new(&index_path);
     let index = Index::open_in_dir(directory)?;
 
@@ -29,19 +38,6 @@ fn main() -> tantivy::Result<()> {
     let query = query_parser.parse_query(query)?;
     let searcher = index.reader()?.searcher();
 
-    /*
-    // Allows getting with a limit..
-    let top_docs = searcher.search(&query, &TopDocs::with_limit(10000))?;
-    for (_score, doc_address) in top_docs {
-        let retrieved_doc = searcher.doc(doc_address)?;
-        let foo = retrieved_doc.get_all(pkgbuild);
-        println!("{}", &foo[0].text().unwrap());
-        //let values = retrieved_doc.get_all();
-        //println!("{}", values[0].text);
-        println!("{}", schema.to_json(&retrieved_doc));
-    }
-    */
-
     let weight = query.weight(&searcher, false)?;
     let schema = index.schema();
     for segment_reader in searcher.segment_readers() {
@@ -51,7 +47,7 @@ fn main() -> tantivy::Result<()> {
             let doc_id = scorer.doc();
             let doc = store_reader.get(doc_id)?;
             let named_doc = schema.to_named_doc(&doc);
-            println!("{}", serde_json::to_string(&named_doc).unwrap());
+            println!("{}", serde_json::to_string_pretty(&named_doc).unwrap());
         }
     }
     println!("{} ms", now.elapsed().as_millis());
