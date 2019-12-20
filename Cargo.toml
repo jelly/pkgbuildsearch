@@ -14,7 +14,13 @@ path = "src/main.rs"
 name = "search"
 path = "src/search.rs"
 
+[[bin]]
+name = "searchweb"
+path = "src/searchweb.rs"
 
 [dependencies]
 tantivy = "0.10.3"
 serde_json = "1.0.41"
+clap = "2.33.0"
+actix-web = "1.0.9"
+serde = "1.0.102"
