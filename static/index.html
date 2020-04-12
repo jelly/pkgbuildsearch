@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>PKGBUILD search</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
+		<style>
+			body: {
+				color: #333;
+			}
+
+			em {
+				background-color: rgba(255,255,140,0.5);
+				font-weight: bold;
+				font-style: normal;
+			}
+
+			#root {
+				margin: 0 auto;
+				padding: 0px 20px 20px 20px;
+				max-width: 960px;
+			}
+
+			#searchbar {
+				padding-bottom: 0px;
+			}
+
+			#statsholder {
+				padding: 0px;
+			}
+
+			#stats {
+				font-size: 12px;
+				color: #aaa;
+			}
+		</style>
+	</head>
+	<body>
+		<section id="searchbar" class="section">
+			<div class="container">
+				<div class="column">
+					<div class="field has-addons">
+						<div class="control is-expanded">
+							<input class="input" type="text" placeholder="pacman"  id="q"/>
+						</div>
+					<div class="control">
+						<a id="button" class="button is-info">
+							Search
+						</a>
+					</div>
+				</div>
+				<div id="statsholder" class="column is-pulled-right">
+					<p id="stats"></p>
+				</div>
+			</div>
+		</section>
+		<section class="section">
+			<div id="results" class="content">
+			</div>
+		</section>
+		<!-- TODO: add footer -->
+	</body>
+	<script src="app.js" charset="utf-8"></script>
+</html>
