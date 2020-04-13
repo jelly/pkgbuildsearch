@@ -1,7 +1,28 @@
 const searchBox = document.getElementById('q');
 
+function debounce(func, wait, immediate) {
+  let timeout;
+  return function() {
+    const context = this;
+    const args = arguments;
+
+    const later = function() {
+      timeout = null;
+      if (!immediate) {
+        func.apply(context, args);
+      }
+    }
+
+    const callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) {
+      func.apply(context, args);
+    }
+  }
+}
+
 // Find where we match text and then get 2 lines above and beyond for context.
-// TODO: get multiple matches in one file...
 function extractBodyLines(body, query) {
   const results = [];
   const lines = body.split('\n');
@@ -85,7 +106,6 @@ function showData(data) {
   stats.innerHTML = data.processingTimeMs + ' ms / ' + data.nbHits + ' documents';
 }
 
-// TODO: deboucning....
 function search() {
   let query = searchBox.value.trim();
 
@@ -103,17 +123,17 @@ function search() {
   });
 }
 
-
-searchBox.addEventListener('keyup', function(event) {
+function enter(event) {
   if (event.key == 'Enter') {
     search();
   }
-});
+}
 
-document.getElementById('button').addEventListener('click', function(event) {
-  search();
-});
+searchBox.addEventListener('keyup', debounce(enter, 200));
 
+document.getElementById('button').addEventListener('click', debounce(search, 200));
+
+// Automatically search when a search hash is found.
 if (window.location.hash) {
   let hash = window.location.hash.substring(1)
   searchBox.value = hash;
