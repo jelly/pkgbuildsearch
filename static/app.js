@@ -1,3 +1,5 @@
+const searchBox = document.getElementById('q');
+
 // Find where we match text and then get 2 lines above and beyond for context.
 // TODO: get multiple matches in one file...
 function extractBodyLines(body, query) {
@@ -85,21 +87,35 @@ function showData(data) {
 
 // TODO: deboucning....
 function search() {
-  const input = document.getElementById('q');
-  if (input.value == '') {
+  let query = searchBox.value.trim();
+
+  searchBox.value = query;
+  window.location.hash = query;
+
+  if (query == '') {
     return;
   }
 
-  fetch('/search/indexes/pkgbuilds/search?attributesToHighlight=*&q=' + input.value).then(function(response) {
+  fetch('/search/indexes/pkgbuilds/search?attributesToHighlight=*&q=' + query).then(function(response) {
     return response.json();
   }).then(function(data) {
     showData(data);
   });
 }
 
-document.getElementById('q').onkeyup = function(event) {
-  if (event.keyCode == 13) {
+
+searchBox.addEventListener('keyup', function(event) {
+  if (event.key == 'Enter') {
     search();
   }
+});
+
+document.getElementById('button').addEventListener('click', function(event) {
+  search();
+});
+
+if (window.location.hash) {
+  let hash = window.location.hash.substring(1)
+  searchBox.value = hash;
+  search();
 }
-document.getElementById('button').onclick = search;
