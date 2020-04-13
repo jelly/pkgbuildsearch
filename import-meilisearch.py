@@ -6,7 +6,7 @@ from glob import glob
 import meilisearch
 
 
-# Arbitrair
+# TODO: Arbitrair
 BATCH_SIZE = 50
 INDEX_UID = 'pkgbuilds'
 
@@ -16,6 +16,7 @@ def get_index():
     indexes = client.get_indexes()
     for index in indexes:
         if index['name'] == INDEX_UID:
+            index = client.get_index(INDEX_UID)
             break
     else:
         index = client.create_index(uid=INDEX_UID)
