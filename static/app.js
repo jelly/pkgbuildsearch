@@ -79,7 +79,7 @@ function showData(data) {
 
     const link = document.createElement("a");
     // TODO: community/packages difference
-    link.href = "https://git.archlinux.org/svntogit/packages.git/tree/trunk/PKGBUILD?h=packages/" + pkgbase
+    link.href = "https://git.archlinux.org/svntogit/" + result.repo + ".git/tree/trunk/PKGBUILD?h=packages/" + pkgbase
     link.innerHTML = pkgbase;
 
     h4.appendChild(link);
