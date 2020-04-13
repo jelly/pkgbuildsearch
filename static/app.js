@@ -32,7 +32,6 @@ function createCodeBlock(body) {
   // TODO: figure out how this can happen: "latex" search
   body = body.replace(/^\n+|\n+$/, '');
   body = body.replace(/\n/g, "<br/>");
-  body += "<hr>";
   content.innerHTML = body;
 
   return content;
@@ -68,7 +67,12 @@ function showData(data) {
 
     const searchMatches = extractBodyLines(body, data.query);
     for (let j = 0; j < searchMatches.length; j++) {
-      div.appendChild(createCodeBlock(searchMatches[j]));
+      let codeblock = createCodeBlock(searchMatches[j]);
+      // Add seperator for non-last items
+      if (j != (searchMatches.length - 1)) {
+        codeblock.innerHTML += "<hr>";
+      }
+      div.appendChild(codeblock);
     }
 
     fragment.appendChild(div);
