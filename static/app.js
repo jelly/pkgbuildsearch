@@ -3,20 +3,39 @@
 function extractBodyLines(body, query) {
   const results = [];
   const lines = body.split('\n');
-  const re = new RegExp(query, 'gi');
+
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
-    if (!line.match(re)) {
+    if (!line.match('<em>')) {
       continue;
     }
 
     // A match, now we want to grab the context
     const lower = (i - 2 < 0) ? 0: i - 2;
     const upper = (i + 2 > lines.length) ? lines.length: i + 2;
-    results.push(lines.slice(lower, upper).join("\n"));
+
+    let text = lines.slice(lower, upper).join("\n");
+    results.push(text);
+    
+    // Skip next two lines as they are already in context
+    i += 2;
   }
 
-  return results[0];
+  return results;
+}
+
+function createCodeBlock(body) {
+  const content = document.createElement("div");
+  content.className = "body content";
+
+  // TODO: remove starting \n
+  // TODO: figure out how this can happen: "latex" search
+  body = body.replace(/^\n+|\n+$/, '');
+  body = body.replace(/\n/g, "<br/>");
+  body += "<hr>";
+  content.innerHTML = body;
+
+  return content;
 }
 
 function showData(data) {
@@ -30,7 +49,8 @@ function showData(data) {
     const result = data.hits[i];
     // TODO: Escape body HTML
     const pkgbase = result.pkgbase_id;
-    let body = result.body;
+    // TODO: check that _formatted is there
+    let body = result._formatted.body;
 
     const div = document.createElement("div");
     div.className = "box";
@@ -46,21 +66,10 @@ function showData(data) {
     h4.appendChild(link);
     div.appendChild(h4);
 
-    const content = document.createElement("div");
-    content.className = "body content";
-
-    // TODO: remove starting \n
-    body = extractBodyLines(body, data.query);
-    // TODO: figure out how this can happen: "latex" search
-    if (!body) {
-      console.error(result);
-      continue;
+    const searchMatches = extractBodyLines(body, data.query);
+    for (let j = 0; j < searchMatches.length; j++) {
+      div.appendChild(createCodeBlock(searchMatches[j]));
     }
-    body = body.replace(/\n/g, "<br/>");
-    body = body.replace(data.query, "<em>" + data.query + "</em>");
-    content.innerHTML = body;
-
-    div.appendChild(content);
 
     fragment.appendChild(div);
   }
