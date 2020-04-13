@@ -1,6 +1,6 @@
 import argparse
 
-from os.path import dirname
+from os.path import basename
 from glob import glob
 
 import meilisearch
@@ -24,21 +24,25 @@ def get_index():
     return index
 
 
-
 def update_index(repodir):
     index = get_index()
     docs = []
     count = 0
+    # TODO: verify if packages or community
+    repo = basename(repodir)
+
     for entry in glob(f'{repodir}/**/trunk/PKGBUILD'):
         doc = {}
         pkgbase = entry.split('/')[-3]
         doc['pkgbase_id'] = pkgbase
+        doc['repo'] = repo
+
         with open(entry, 'r') as f:
             try:
                 doc['body'] = f.read()
-            except UnicodeDecodeError as e:
-                print(f'unable to index {pkgbase}, {e}')
-                pass
+            except UnicodeDecodeError as exc:
+                print(f'unable to index {pkgbase}, {exc}')
+                continue
 
         docs.append(doc)
         count += 1
@@ -49,10 +53,14 @@ def update_index(repodir):
             docs = []
             count = 0
 
+    # Add remainder
+    if count:
+        ret = index.add_documents(docs)
 
 
 def main(repodir):
     update_index(repodir)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='meilisearch PKGBUILD database indexer')
