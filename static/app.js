@@ -1,5 +1,3 @@
-const searchBox = document.getElementById('q');
-
 function debounce(func, wait, immediate) {
   let timeout;
   return function() {
@@ -51,8 +49,7 @@ function createCodeBlock(body) {
   const content = document.createElement("div");
   content.className = "body content";
 
-  // TODO: remove starting \n
-  // TODO: figure out how this can happen: "latex" search
+  // Remove before/after excess \n.
   body = body.replace(/^\n+|\n+$/, '');
   body = body.replace(/\n/g, "<br/>");
   content.innerHTML = body;
@@ -129,9 +126,11 @@ function enter(event) {
   }
 }
 
-searchBox.addEventListener('keyup', debounce(enter, 200));
+const searchBox = document.getElementById('q');
+const searchButton = document.getElementById('button')
 
-document.getElementById('button').addEventListener('click', debounce(search, 200));
+searchBox.addEventListener('keyup', debounce(enter, 200));
+searchButton.addEventListener('click', debounce(search, 200));
 
 // Automatically search when a search hash is found.
 if (window.location.hash) {
