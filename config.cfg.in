@@ -1,0 +1,10 @@
+[general]
+repo-location = /var/lib/pkgbuildsearch
+
+[community]
+url = git://git.archlinux.org/svntogit/community.git
+# poll-freq-ms = 
+
+[packages]
+url = git://git.archlinux.org/svntogit/packages.git
+# poll-freq-ms = 

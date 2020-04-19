@@ -1,23 +1,15 @@
 # PKGBUILD search
 
-A WIP PKGBUILD search REST service, mostly to teach me a Rust with hardcoded
-shenanigans.
+A simple web frontend to search through Arch Linux's packages PKGBUILD's.
 
+## Dependencies
 
-Requires a clone of Arch Linux's packages, with some fixes:
+* meilisearch
+* python
+* python-meilisearch
+* python-pygit2
 
-```
-$ git clone --depth 1 https://git.archlinux.org/svntogit/packages.git
+## Development
 
-# Fix up PKGBUILD's as, the indexer does not handle it at all
-$ iconv -f ISO-8859-15 -t utf-8  /home/jelle/projects/pkgbuildsearch/packages/aspell-es/trunk/PKGBUILD -o /home/jelle/projects/pkgbuildsearch/packages/aspell-es/trunk/PKGBUILD
-$ iconv -f ISO-8859-15 -t utf-8  /home/jelle/projects/pkgbuildsearch/packages/ntfs-3g/trunk/PKGBUILD -o /home/jelle/projects/pkgbuildsearch/packages/ntfs-3g/trunk/PKGBUILD
-```
-
-## Running
-
-```
-$ mkdir /tmp/pkgbuildsearch
-$ cargo run --bin indexer
-$ cargo run --bin search lol
-```
+For developing a local meilisearch instance is required combined with a caddy
+service to handle the proxying to avoid CORS issues.
