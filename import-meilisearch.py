@@ -103,6 +103,9 @@ def parse_config(configfile):
     # All sections apart from [general] are considered Git repos
     for section in config.sections():
         url = config[section].get('url')
+        if section == "general":
+            continue
+
         if not url:
             logging.warning('section "%s" as no url', section)
             continue
