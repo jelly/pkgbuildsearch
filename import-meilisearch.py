@@ -8,6 +8,7 @@ from glob import glob
 import meilisearch
 
 import pygit2
+#from pygit2 import Repository, GIT_RESET_HARD
 
 
 # TODO: Arbitrair batch size
@@ -31,24 +32,33 @@ def get_index():
     return index
 
 
-def update_index(repo):
+def update_index(repo, changes):
     index = get_index()
+    deletes = []
     docs = []
     count = 0
     repodir = repo['dir']
     repo = os.path.basename(repodir)
 
-    for entry in glob(f'{repodir}/**/trunk/PKGBUILD'):
+    if not changes:
+        changes = glob(f'{repodir}/**/trunk/PKGBUILD')
+
+    for entry in changes:
         doc = {}
         pkgbase = entry.split('/')[-3]
         doc['pkgbase_id'] = pkgbase
         doc['repo'] = repo
 
+        # PKGBUILD might have been removed
+        if not os.path.exists(entry):
+            deletes.append(pkgbase)
+            continue
+
         with open(entry, 'r') as f:
             try:
                 doc['body'] = f.read()
             except UnicodeDecodeError as exc:
-                print(f'unable to index {pkgbase}, {exc}')
+                logging.warning('unable to index %s, %s', pkgbase, exc)
                 continue
 
         docs.append(doc)
@@ -56,7 +66,7 @@ def update_index(repo):
 
         if count == BATCH_SIZE:
             ret = index.add_documents(docs)
-            print('adding documents', ret)
+            logging.info("adding documents: '%s'", ret)
             docs = []
             count = 0
 
@@ -64,17 +74,58 @@ def update_index(repo):
     if count:
         ret = index.add_documents(docs)
 
+    if deletes:
+        index.delete_documents(deletes)
+        logging.info('deleted %s documents', len(deletes))
+
+
+def update_repo(repodir, remote_name='origin', branch='master'):
+    repo = pygit2.Repository(repodir)
+
+    for remote in repo.remotes:
+        if remote.name == remote_name:
+            break
+
+    if not remote:
+        logging.error("no remote found, unable to update")
+        return []
+
+    remote.fetch()
+    remote_master_id = repo.lookup_reference(f'refs/remotes/origin/{branch}').target
+
+    head_commit_id = repo.head.target
+    repo.reset(remote_master_id, pygit2.GIT_RESET_HARD)
+
+    diff = repo.diff(head_commit_id, remote_master_id)
+
+    files_changed = []
+    for delta in diff.deltas:
+        path = delta.new_file.path
+        if 'trunk' in path and 'PKGBUILD' in path:
+            files_changed.append(delta.new_file.path)
+
+    logging.info("updated repo: '%s' with %s changes", os.path.basename(repodir), len(files_changed))
+
+    # Append clone directory for indexing
+    files_changed = (f'{repodir}/{change}' for change in files_changed)
+
+    return files_changed
+
 
 def update_repos(repos):
+    changes = []
+
     for repo in repos:
         repodir = repo['dir']
         # Already cloned, update
         if os.path.exists(repodir):
             logging.info("Updating repo: '%s'", os.path.basename(repodir))
-            # TODO: updating
+            changes = update_repo(repodir)
         else:
             logging.info("Initial clone of repo: '%s'", os.path.basename(repodir))
             pygit2.clone_repository(repo['url'], repodir)
+
+    return changes
 
 
 def init_logging(log_level):
@@ -123,10 +174,21 @@ def main(configfile, log_level):
     init_logging(log_level)
     repos = parse_config(configfile)
     
-    update_repos(repos)
+    #changes = update_repos(repos)
 
     for repo in repos:
-        update_index(repo)
+        changes = []
+        repodir = repo['dir']
+
+        # Already cloned, update
+        if os.path.exists(repodir):
+            logging.info("Updating repo: '%s'", os.path.basename(repodir))
+            changes = update_repo(repodir)
+        else:
+            logging.info("Initial clone of repo: '%s'", os.path.basename(repodir))
+            pygit2.clone_repository(repo['url'], repodir)
+
+        update_index(repo, changes)
 
 
 def is_file(filepath):
