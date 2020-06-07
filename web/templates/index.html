@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Arch Linux PKGBUILD search</title>
+	<style>
+	{% include "bulma.min.css" %}
+
+	em {
+		font-style: inherit;
+		color: hsl(204, 86%, 25%);
+		background-color: hsl(204, 86%, 88%);
+	}
+
+	#statsholder {
+		padding: 0px;
+	}
+
+	#stats {
+		font-size: 12px;
+		color: #aaa;
+	}
+
+	#searchbar {
+		padding-bottom: 0px;
+	}
+	</style>
+</head>
+<body>
+	<section id="searchbar" class="section">
+		<div class="container">
+			<div class="column">
+				<form>
+				<div class="field has-addons">
+					<div class="control is-expanded">
+						<input class="input" type="text" placeholder="pacman" name="q" value="{{ query }}"/>
+					</div>
+				<div class="control">
+					<a id="button" class="button is-info">
+						Search
+					</a>
+				</div>
+				</form>
+			</div>
+			<div id="statsholder" class="column is-pulled-right">
+				{% if processing_time_ms and nb_hits %}
+				<p id="stats">{{ processing_time_ms }} ms / {{ nb_hits }} documents</p>
+				{% endif %}
+			</div>
+		</div>
+	</section>
+	{% if formatted_hits %}
+		<section class="section">
+		{% for hit in formatted_hits %}
+			<div class="box">
+				<p class="title is-4"><a href="https://git.archlinux.org/svntogit/{{ hit.repo }}.git/tree/trunk/PKGBUILD?h=packages/{{ hit.pkgbase_id }}">{{ hit.pkgbase_id }}</a></p>
+				<div class="body content">
+				{% for part in hit.parts %} 
+					<pre>{{ part | safe }}</pre>
+				{% endfor %}
+				</div>
+			</div>
+		{% endfor %}
+		</section>
+	{% endif %}
+</body>
+</html>
