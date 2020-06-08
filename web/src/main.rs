@@ -156,7 +156,12 @@ async fn index(
             ctx.insert("processing_time_ms", &searchresult.processing_time_ms);
             ctx.insert("nb_hits", &searchresult.nb_hits);
             },
-            Err(_error) => {
+            Err(error) => {
+                match error {
+                    meilisearch_sdk::errors::Error::UnreachableServer => println!("no reachable server"),
+                    meilisearch_sdk::errors::Error::IndexNotFound => println!("index not found"),
+                    _ => {}
+                }
                 // TODO: log error type with switch?
                 // Add eroror handling to template.
                 // TODO: show error?
