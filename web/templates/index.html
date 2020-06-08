@@ -50,6 +50,11 @@
 			</div>
 		</div>
 	</section>
+	{% if error %}
+		<section class="section">
+			<p>Meilisearch is down<p>
+		</section>
+	{% endif %}
 	{% if formatted_hits %}
 		<section class="section">
 		{% for hit in formatted_hits %}

@@ -62,6 +62,11 @@ struct ParsedResult {
     parts: Vec<String>,
 }
 
+struct AppData<'a> {
+    tera: tera::Tera,
+    client: meilisearch_sdk::client::Client<'a>
+}
+
 // That trait is required to make a struct usable by an index
 impl Document for Pkgbuild {
     type UIDType = String;
@@ -85,6 +90,7 @@ fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
 
             match matches {
                 Some(_) => {
+                    // TODO: move logic to a seperate function.
                     if outside > 0 {
                         outside = outside - 1;
                         continue
@@ -134,27 +140,41 @@ async fn index(
 
         // TODO: pass index to this function and create client in main, does the client handle reconnects?
         let client = Client::new("http://localhost:7700", "");
-        let pkgbuilds = client.get_index("pkgbuilds").unwrap();
-        let mquery = Query::new(&name).with_limit(25).with_attributes_to_highlight("*");
-        let searchresult = pkgbuilds.search::<Pkgbuild>(&mquery).unwrap();
-        let hits = searchresult.hits;
+        match client.get_index("pkgbuilds") {
+            Ok(pkgbuilds) => {
+            let mquery = Query::new(&name).with_limit(25).with_attributes_to_highlight("*");
+            let searchresult = pkgbuilds.search::<Pkgbuild>(&mquery).unwrap();
+            let hits = searchresult.hits;
 
-        let formatted_hits = format_hits(&hits);
+            let formatted_hits = format_hits(&hits);
 
-        let mut ctx = tera::Context::new();
-        ctx.insert("query", &name.to_owned());
-        ctx.insert("hits", &hits);
-        ctx.insert("formatted_hits", &formatted_hits);
-        ctx.insert("processing_time_ms", &searchresult.processing_time_ms);
-        ctx.insert("nb_hits", &searchresult.nb_hits);
-        tmpl.render("index.html", &ctx)
-            .map_err(|_| error::ErrorInternalServerError("Template error"))?
+            let mut ctx = tera::Context::new();
+            ctx.insert("query", &name.to_owned());
+            ctx.insert("hits", &hits);
+            ctx.insert("formatted_hits", &formatted_hits);
+            ctx.insert("processing_time_ms", &searchresult.processing_time_ms);
+            ctx.insert("nb_hits", &searchresult.nb_hits);
+            tmpl.render("index.html", &ctx)
+                .map_err(|_| error::ErrorInternalServerError("Template error"))?
+            },
+            Err(_error) => {
+                // TODO: log error type with switch?
+                // Add eroror handling to template.
+                let mut ctx = tera::Context::new();
+                ctx.insert("query", "");
+                // TODO: show error?
+                ctx.insert("error", "yes");
+                tmpl.render("index.html", &ctx)
+                    .map_err(|_| error::ErrorInternalServerError("Template error"))?
+            }
+        }
     } else {
         let mut ctx = tera::Context::new();
         ctx.insert("query", "");
         tmpl.render("index.html", &ctx)
             .map_err(|_| error::ErrorInternalServerError("Template error"))?
     };
+
     Ok(HttpResponse::Ok()
        .content_type("text/html")
        .header("X-Content-Type-Options", "nosniff")
@@ -218,7 +238,9 @@ async fn main() -> std::io::Result<()> {
     let args = Args::from_args();
     let mut template_dir = args.template_dir;
     template_dir.push("**/*");
-    println!("{}", template_dir.display());
+
+    let meilisearch_addr = format!("https://{}", args.meilisearch_addr);
+    let client = Client::new(meilisearch_addr.as_str(), args.meilisearch_apikey.as_str());
 
     HttpServer::new(move || {
         let tera =
