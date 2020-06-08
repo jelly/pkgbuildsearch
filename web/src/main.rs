@@ -76,7 +76,6 @@ impl Document for Pkgbuild {
     }
 }
 
-
 fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
     let mut formatted_hits = Vec::new();
 
@@ -135,9 +134,13 @@ async fn index(
     tmpl: web::Data<tera::Tera>,
     query: web::Query<HashMap<String, String>>,
 ) -> Result<HttpResponse, Error> {
-    let s = if let Some(name) = query.get("q") {
-        // submitted form
+    let default_query = &String::from("");
+    let name = query.get("q").unwrap_or(default_query);
+    let mut ctx = tera::Context::new();
+    ctx.insert("query", &name.to_owned());
 
+        // submitted form
+    if ! name.is_empty() {
         // TODO: pass index to this function and create client in main, does the client handle reconnects?
         let client = Client::new("http://localhost:7700", "");
         match client.get_index("pkgbuilds") {
@@ -148,32 +151,22 @@ async fn index(
 
             let formatted_hits = format_hits(&hits);
 
-            let mut ctx = tera::Context::new();
-            ctx.insert("query", &name.to_owned());
             ctx.insert("hits", &hits);
             ctx.insert("formatted_hits", &formatted_hits);
             ctx.insert("processing_time_ms", &searchresult.processing_time_ms);
             ctx.insert("nb_hits", &searchresult.nb_hits);
-            tmpl.render("index.html", &ctx)
-                .map_err(|_| error::ErrorInternalServerError("Template error"))?
             },
             Err(_error) => {
                 // TODO: log error type with switch?
                 // Add eroror handling to template.
-                let mut ctx = tera::Context::new();
-                ctx.insert("query", "");
                 // TODO: show error?
                 ctx.insert("error", "yes");
-                tmpl.render("index.html", &ctx)
-                    .map_err(|_| error::ErrorInternalServerError("Template error"))?
             }
         }
-    } else {
-        let mut ctx = tera::Context::new();
-        ctx.insert("query", "");
-        tmpl.render("index.html", &ctx)
-            .map_err(|_| error::ErrorInternalServerError("Template error"))?
-    };
+    }
+
+    let s = tmpl.render("index.html", &ctx)
+        .map_err(|_| error::ErrorInternalServerError("Template error"))?;
 
     Ok(HttpResponse::Ok()
        .content_type("text/html")
