@@ -83,7 +83,7 @@ impl Document for Pkgbuild {
     }
 }
 
-fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
+fn format_hits(hits: &[Pkgbuild], ) -> Vec<ParsedResult> {
     let mut formatted_hits = Vec::new();
 
     for hit in hits {
@@ -98,14 +98,11 @@ fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
                 Some(_) => {
                     // TODO: move logic to a seperate function.
                     if outside > 0 {
-                        outside = outside - 1;
+                        outside -= 1;
                         continue
                     }
 
-                    let mut lower = 0;
-                    if i > 2 {
-                        lower = i - 2;
-                    }
+                    let lower = if i > 2 { i - 2 } else { 0 };
 
                     let mut upper = lines.len();
                     if i + 2 < upper { 
@@ -126,7 +123,7 @@ fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
         let pkgbuild = ParsedResult  {
             pkgbase_id: hit.pkgbase_id.clone(),
             repo: hit.repo.clone(),
-            parts: parts,
+            parts
         };
 
         formatted_hits.push(pkgbuild)
@@ -252,7 +249,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let tera = Tera::new(template_dir.to_str().unwrap()).unwrap();
-        let data = AppData { tera: tera, meilisearch_addr: meilisearch_addr.clone(), meilisearch_apikey: meilisearch_apikey.clone() };
+        let data = AppData { tera, meilisearch_addr: meilisearch_addr.clone(), meilisearch_apikey: meilisearch_apikey.clone() };
         App::new()
             .data(data)
             .wrap(middleware::Logger::default())
