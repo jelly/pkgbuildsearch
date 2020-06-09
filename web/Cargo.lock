@@ -1326,6 +1326,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "env_logger",
+ "log",
  "meilisearch-sdk",
  "serde",
  "structopt",

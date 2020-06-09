@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use env_logger::Env;
 use actix_http::{body::Body, Response};
 use actix_web::dev::ServiceResponse;
 use actix_web::http::StatusCode;
@@ -10,6 +11,7 @@ use tera::Tera;
 use meilisearch_sdk::{document::Document, client::Client, search::Query};
 use serde::{Serialize, Deserialize};
 use structopt::StructOpt;
+use log::{error};
 
 fn parse_path(src: &str) -> Result<PathBuf, &str> {
     let output = PathBuf::from(src);
@@ -22,21 +24,25 @@ fn parse_path(src: &str) -> Result<PathBuf, &str> {
 #[derive(Debug, StructOpt)]
 #[structopt(name = "pkgbuildsearchweb", about, author)]
 struct Args {
-    /// Host address to bind to.  Accepts hostnames.
-    #[structopt(long, default_value = "localhost:8080", env = "PKGBUILDSEARCH_ADDR")]
-    bind_addr: String,
+    /// Address on which to expose the web interface.
+    #[structopt(long, default_value = "localhost:8080", env = "PKGBUILDSEARCH_LISTEN_ADDRESS")]
+    listen_address: String,
 
-    /// Base template directory, default $CARGO_MANIFEST_DIR/**/*
+    /// Base template directory
     #[structopt(long, default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/templates"), env = "PKGBUILDSEARCH_TEMPLATE", parse(try_from_str = parse_path))]
     template_dir: PathBuf,
 
-    /// Base template directory, default $CARGO_MANIFEST_DIR/**/*
+    /// Meilisearch listen address
     #[structopt(long, default_value = "localhost:7700", env = "PKGBUILDSEARCH_MEILISEARCH_ADDR")]
-    meilisearch_addr: String,
+    meilisearch_listen_address: String,
 
-    /// Base template directory, default $CARGO_MANIFEST_DIR/**/*
-    #[structopt(long, default_value = "localhost:7700", env = "PKGBUILDSEARCH_MEILISEARCH_APIKEY", hide_env_values = true)]
+    /// Meiliearch master key
+    #[structopt(long, default_value = "", env = "MEILI_MASTER_KEY", hide_env_values = true)]
     meilisearch_apikey: String,
+
+    /// Verbose logging
+    #[structopt(short)]
+    verbose: bool,
 }
 
 
@@ -62,9 +68,10 @@ struct ParsedResult {
     parts: Vec<String>,
 }
 
-struct AppData<'a> {
+struct AppData {
     tera: tera::Tera,
-    client: meilisearch_sdk::client::Client<'a>
+    meilisearch_addr: String,
+    meilisearch_apikey: String,
 }
 
 // That trait is required to make a struct usable by an index
@@ -119,7 +126,7 @@ fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
         let pkgbuild = ParsedResult  {
             pkgbase_id: hit.pkgbase_id.clone(),
             repo: hit.repo.clone(),
-            parts: parts
+            parts: parts,
         };
 
         formatted_hits.push(pkgbuild)
@@ -128,10 +135,8 @@ fn format_hits(hits: &Vec<Pkgbuild>, ) -> Vec<ParsedResult> {
     formatted_hits
 }
 
-
-// store tera template in application state
 async fn index(
-    tmpl: web::Data<tera::Tera>,
+    data: web::Data<AppData>,
     query: web::Query<HashMap<String, String>>,
 ) -> Result<HttpResponse, Error> {
     let default_query = &String::from("");
@@ -139,10 +144,10 @@ async fn index(
     let mut ctx = tera::Context::new();
     ctx.insert("query", &name.to_owned());
 
-        // submitted form
+    // Submitted form
     if ! name.is_empty() {
-        // TODO: pass index to this function and create client in main, does the client handle reconnects?
-        let client = Client::new("http://localhost:7700", "");
+        let client = Client::new(data.meilisearch_addr.as_str(), data.meilisearch_apikey.as_str());
+
         match client.get_index("pkgbuilds") {
             Ok(pkgbuilds) => {
             let mquery = Query::new(&name).with_limit(25).with_attributes_to_highlight("*");
@@ -157,20 +162,19 @@ async fn index(
             ctx.insert("nb_hits", &searchresult.nb_hits);
             },
             Err(error) => {
+                println!("error");
                 match error {
-                    meilisearch_sdk::errors::Error::UnreachableServer => println!("no reachable server"),
-                    meilisearch_sdk::errors::Error::IndexNotFound => println!("index not found"),
-                    _ => {}
+                    meilisearch_sdk::errors::Error::UnreachableServer => error!("no reachable server"),
+                    meilisearch_sdk::errors::Error::IndexNotFound => error!("index not found"),
+                    _ => error!("Unexpected error occurred")
                 }
-                // TODO: log error type with switch?
-                // Add eroror handling to template.
                 // TODO: show error?
                 ctx.insert("error", "yes");
             }
         }
     }
 
-    let s = tmpl.render("index.html", &ctx)
+    let s = data.tera.render("index.html", &ctx)
         .map_err(|_| error::ErrorInternalServerError("Template error"))?;
 
     Ok(HttpResponse::Ok()
@@ -229,28 +233,33 @@ fn get_error_response<B>(res: &ServiceResponse<B>, error: &str) -> Response<Body
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    // TODO: set log level via structopt
-    std::env::set_var("RUST_LOG", "actix_web=info");
-    env_logger::init();
-
     let args = Args::from_args();
-    let mut template_dir = args.template_dir;
-    template_dir.push("**/*");
 
-    let meilisearch_addr = format!("https://{}", args.meilisearch_addr);
-    let client = Client::new(meilisearch_addr.as_str(), args.meilisearch_apikey.as_str());
+    let logging = if args.verbose {
+        "actix_web=debug,pkgbuildsearchweb=debug,info"
+    } else {
+        "actix_web=debug,info"
+    };
+
+    env_logger::init_from_env(Env::default()
+        .default_filter_or(logging));
+
+    let mut template_dir = args.template_dir;
+    template_dir.push("*");
+
+    let meilisearch_addr = format!("http://{}", args.meilisearch_listen_address);
+    let meilisearch_apikey = args.meilisearch_apikey;
 
     HttpServer::new(move || {
-        let tera =
-            Tera::new(template_dir.to_str().unwrap()).unwrap();
-
+        let tera = Tera::new(template_dir.to_str().unwrap()).unwrap();
+        let data = AppData { tera: tera, meilisearch_addr: meilisearch_addr.clone(), meilisearch_apikey: meilisearch_apikey.clone() };
         App::new()
-            .data(tera)
-            .wrap(middleware::Logger::default()) // enable logger
+            .data(data)
+            .wrap(middleware::Logger::default())
             .service(web::resource("/").route(web::get().to(index)))
             .service(web::scope("").wrap(error_handlers()))
     })
-    .bind(args.bind_addr)?
+    .bind(args.listen_address)?
     .run()
     .await
 }
