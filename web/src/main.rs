@@ -9,6 +9,7 @@ use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::{error, middleware, web, App, Error, HttpResponse, HttpServer, Result};
 use tera::Tera;
 use meilisearch_sdk::{document::Document, client::Client, search::Query};
+use meilisearch_sdk::errors::Error::{UnreachableServer, IndexNotFound};
 use serde::{Serialize, Deserialize};
 use structopt::StructOpt;
 use log::{error};
@@ -159,13 +160,11 @@ async fn index(
             ctx.insert("nb_hits", &searchresult.nb_hits);
             },
             Err(error) => {
-                println!("error");
                 match error {
-                    meilisearch_sdk::errors::Error::UnreachableServer => error!("no reachable server"),
-                    meilisearch_sdk::errors::Error::IndexNotFound => error!("index not found"),
+                    UnreachableServer => error!("no reachable server"),
+                    IndexNotFound => error!("index not found"),
                     _ => error!("Unexpected error occurred")
                 }
-                // TODO: show error?
                 ctx.insert("error", "yes");
             }
         }
