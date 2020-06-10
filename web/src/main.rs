@@ -6,7 +6,7 @@ use actix_http::{body::Body, Response};
 use actix_web::dev::ServiceResponse;
 use actix_web::http::StatusCode;
 use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::{error, middleware, web, App, Error, HttpResponse, HttpServer, Result};
+use actix_web::{error, middleware, web, App, Error, HttpResponse, HttpServer};
 use tera::Tera;
 use meilisearch_sdk::{document::Document, client::Client, search::Query};
 use meilisearch_sdk::errors::Error::{UnreachableServer, IndexNotFound};
@@ -136,7 +136,7 @@ fn format_hits(hits: &[Pkgbuild], ) -> Vec<ParsedResult> {
 async fn index(
     data: web::Data<AppData>,
     query: web::Query<HashMap<String, String>>,
-) -> Result<HttpResponse, Error> {
+) -> actix_web::Result<HttpResponse, Error> {
     let default_query = &String::from("");
     let name = query.get("q").unwrap_or(default_query);
     let mut ctx = tera::Context::new();
@@ -189,7 +189,7 @@ fn error_handlers() -> ErrorHandlers<Body> {
 }
 
 // Error handler for a 404 Page not found error.
-fn not_found<B>(res: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+fn not_found<B>(res: ServiceResponse<B>) -> actix_web::Result<ErrorHandlerResponse<B>> {
     let response = get_error_response(&res, "Page not found");
     Ok(ErrorHandlerResponse::Response(
         res.into_response(response.into_body()),
@@ -245,10 +245,16 @@ async fn main() -> std::io::Result<()> {
 
     let meilisearch_addr = format!("http://{}", args.meilisearch_listen_address);
     let meilisearch_apikey = args.meilisearch_apikey;
+    let tera = match Tera::new(template_dir.to_str().unwrap()) {
+        Ok(t) => t,
+        Err(e) => {
+            println!("Parsing error(s): {}", e);
+            ::std::process::exit(1);
+        }
+    };
 
     HttpServer::new(move || {
-        let tera = Tera::new(template_dir.to_str().unwrap()).unwrap();
-        let data = AppData { tera, meilisearch_addr: meilisearch_addr.clone(), meilisearch_apikey: meilisearch_apikey.clone() };
+        let data = AppData { tera: tera.clone(), meilisearch_addr: meilisearch_addr.clone(), meilisearch_apikey: meilisearch_apikey.clone() };
         App::new()
             .data(data)
             .wrap(middleware::Logger::default())
