@@ -14,6 +14,9 @@ use serde::{Serialize, Deserialize};
 use structopt::StructOpt;
 use log::{error};
 
+// The limit of results per page
+const PAGE_LIMIT: usize = 25;
+
 fn parse_path(src: &str) -> Result<PathBuf, &str> {
     let output = PathBuf::from(src);
     if !output.exists() {
@@ -148,7 +151,7 @@ async fn index(
 
         match client.get_index("pkgbuilds") {
             Ok(pkgbuilds) => {
-            let mquery = Query::new(&name).with_limit(25).with_attributes_to_highlight("*");
+            let mquery = Query::new(&name).with_limit(PAGE_LIMIT).with_attributes_to_highlight("*");
             let searchresult = pkgbuilds.search::<Pkgbuild>(&mquery).unwrap();
             let hits = searchresult.hits;
 
