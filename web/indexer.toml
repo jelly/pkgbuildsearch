@@ -1,0 +1,4 @@
+repolocation = "/var/lib/pkgbuildsearch"
+
+[repos.packages]
+url = "git://git.archlinux.org/svntogit/packages.git"
